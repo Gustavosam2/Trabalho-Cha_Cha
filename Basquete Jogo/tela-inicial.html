@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tiger vs Bear</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+    canvas { display: block; }
+
+    #menuInicial, #telaVitoria {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: orange;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #000;
+      user-select: none;
+      z-index: 9999;
+    }
+    #menuInicial img, #telaVitoria img {
+      width: 300px;
+      height: auto;
+      margin-bottom: 20px;
+      image-rendering: pixelated;
+      border: 3px solid black;
+    }
+    /* Fonte Bangers para todos os títulos e mensagens */
+    #menuInicial h1, #telaVitoria h1, #mensagemVitoria {
+      font-family: 'Bangers', cursive;
+      font-weight: normal;
+    }
+    #menuInicial h1 {
+      font-size: 4vw;
+      margin-bottom: 40px;
+      text-shadow: 2px 2px 4px #444;
+    }
+    #telaVitoria h1 {
+      font-size: 5vw;
+      color: #ffd700;
+      text-shadow: 3px 3px 6px #000;
+      margin-bottom: 40px;
+    }
+    #botaoJogar, #botaoReiniciar {
+      font-size: 2.5vw;
+      padding: 15px 40px;
+      background: #ffd700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 2px 2px 6px #888;
+      transition: background 0.3s ease;
+      font-family: 'Bangers', cursive;
+    }
+    #botaoJogar:hover, #botaoReiniciar:hover {
+      background: #ffea00;
+    }
+    
+    #telaVitoria {
+      display: none;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="menuInicial">
+    <img src="tigre-vs-urso.png" alt="Tiger vs Bear Logo" />
+    <h1>Tiger vs Bear</h1>
+    <button id="botaoJogar" onclick="window.location.href='basquete.html'" >Jogar</button>
+  </div>
+  
+  <div id="telaVitoria">
+    <img id="vencedorImagem" src="" alt="Vencedor" />
+    <h1 id="mensagemVitoria"></h1>
+    <button id="botaoReiniciar" onclick="window.location.href='basquete.html'">Jogar Novamente</button>
+  </div>
