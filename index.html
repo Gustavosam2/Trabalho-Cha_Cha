@@ -156,7 +156,7 @@
     let tempoEmpurrando = 0;
 
     /* ==========================
-       Variáveis de Música
+       Variáveis de Música (HTML5 Audio)
        ========================== */
     let musicaFundo;
     let musicaTocando = false;
@@ -176,16 +176,20 @@
       chaoEcestas = loadImage("chaoEcestas.png");
       fundoPlateiaCestas = loadImage("fundoPlateiaCestas.png");
       bolaSprite = loadImage("bola_basquete.png");
-
-      // Carregar música de fundo (gratuita - Street Basketball beat)
-      // Usando uma música de domínio público de Free Music Archive
-      musicaFundo = loadSound("https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Tours/Enthusiast/Tours_-_01_-_Enthusiast.mp3");
     }
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
       recalcularMedidas();
       inicializarJogo();
+      
+      // Criar elemento de áudio HTML5 (mais confiável que p5.sound)
+      musicaFundo = new Audio();
+      // Usando uma música de basquete/hip-hop gratuita
+      musicaFundo.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+      musicaFundo.loop = true;
+      musicaFundo.volume = volumeMusica;
+      
       noLoop();
     }
 
@@ -196,9 +200,22 @@
       
       // Iniciar música quando o jogo começar
       if (musicaFundo && !musicaTocando && !musicaMutada) {
-        musicaFundo.setVolume(volumeMusica);
-        musicaFundo.loop();
-        musicaTocando = true;
+        musicaFundo.play().then(() => {
+          musicaTocando = true;
+          console.log("Música iniciada!");
+        }).catch(e => {
+          console.log("Erro ao tocar música:", e);
+          // Tentar novamente após interação do usuário
+          document.addEventListener('click', function tocarMusica() {
+            if (!musicaTocando && !musicaMutada) {
+              musicaFundo.play().then(() => {
+                musicaTocando = true;
+                console.log("Música iniciada após clique!");
+              });
+              document.removeEventListener('click', tocarMusica);
+            }
+          }, { once: true });
+        });
       }
       
       loop();
@@ -238,19 +255,23 @@
       
       if (musicaMutada) {
         // Desmutar
-        musicaFundo.setVolume(volumeMusica);
-        if (jogoIniciado && !musicaTocando) {
-          musicaFundo.loop();
-          musicaTocando = true;
-        }
+        musicaFundo.volume = volumeMusica;
         musicaMutada = false;
         btn.innerHTML = '🔊';
         btn.classList.remove('mutado');
         icone.innerHTML = '🎵';
+        
+        // Se o jogo já começou, tentar tocar
+        if (jogoIniciado && !musicaTocando) {
+          musicaFundo.play().then(() => {
+            musicaTocando = true;
+          }).catch(e => console.log("Erro ao desmutar:", e));
+        }
       } else {
         // Mutar
-        musicaFundo.setVolume(0);
+        musicaFundo.pause();
         musicaMutada = true;
+        musicaTocando = false;
         btn.innerHTML = '🔇';
         btn.classList.add('mutado');
         icone.innerHTML = '🔇';
@@ -260,7 +281,7 @@
     function ajustarVolume(valor) {
       volumeMusica = valor / 100;
       if (musicaFundo && !musicaMutada) {
-        musicaFundo.setVolume(volumeMusica);
+        musicaFundo.volume = volumeMusica;
       }
     }
 
@@ -515,7 +536,8 @@
       
       // Parar música no fim do jogo
       if (musicaFundo && musicaTocando) {
-        musicaFundo.stop();
+        musicaFundo.pause();
+        musicaFundo.currentTime = 0;
         musicaTocando = false;
       }
       
