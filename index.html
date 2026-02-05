@@ -58,9 +58,55 @@
     }
 
     #botaoJogar:hover, #botaoReiniciar:hover { background: #ffea00; }
+
+    /* Controles de música */
+    #controleMusica {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px 15px;
+      border-radius: 25px;
+      color: white;
+      font-family: 'Bangers', cursive;
+      font-size: 18px;
+    }
+
+    #btnMusica {
+      background: #ffd700;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    #btnMusica:hover { transform: scale(1.1); }
+    #btnMusica.mutado { background: #ff4444; }
+
+    #volumeSlider {
+      width: 100px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Controles de Música -->
+  <div id="controleMusica">
+    <span id="iconeMusica">🎵</span>
+    <button id="btnMusica" onclick="toggleMusica()">🔊</button>
+    <input type="range" id="volumeSlider" min="0" max="100" value="50" oninput="ajustarVolume(this.value)">
+  </div>
 
   <div id="menuInicial">
     <img src="tigre-vs-urso.png" alt="Tiger vs Bear Logo" />
@@ -94,7 +140,7 @@
 
     let bolaNaAreaCestaEsq = false;
     let bolaNaAreaCestaDir = false;
-    let jogoIniciado = false; // Começa falso para o menu
+    let jogoIniciado = false;
     let jogoAcabou = false;
 
     /* Sprites */
@@ -109,7 +155,16 @@
     let bearEmpurrando = false;
     let tempoEmpurrando = 0;
 
+    /* ==========================
+       Variáveis de Música
+       ========================== */
+    let musicaFundo;
+    let musicaTocando = false;
+    let musicaMutada = false;
+    let volumeMusica = 0.5;
+
     function preload() {
+      // Carregar sprites originais
       tigerSprite = loadImage("tiger_idle.png");
       tigerWalkRightSprite = loadImage("tiger_walk.png");
       tigerJumpSprite = loadImage("tiger_jump.png");
@@ -121,19 +176,31 @@
       chaoEcestas = loadImage("chaoEcestas.png");
       fundoPlateiaCestas = loadImage("fundoPlateiaCestas.png");
       bolaSprite = loadImage("bola_basquete.png");
+
+      // Carregar música de fundo (gratuita - Street Basketball beat)
+      // Usando uma música de domínio público de Free Music Archive
+      musicaFundo = loadSound("https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Tours/Enthusiast/Tours_-_01_-_Enthusiast.mp3");
     }
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
       recalcularMedidas();
       inicializarJogo();
-      noLoop(); // Trava o jogo até o clique no botão
+      noLoop();
     }
 
     // Função para o botão do Menu
     function iniciarJogo() {
       document.getElementById('menuInicial').style.display = 'none';
       jogoIniciado = true;
+      
+      // Iniciar música quando o jogo começar
+      if (musicaFundo && !musicaTocando && !musicaMutada) {
+        musicaFundo.setVolume(volumeMusica);
+        musicaFundo.loop();
+        musicaTocando = true;
+      }
+      
       loop();
     }
 
@@ -158,6 +225,43 @@
       podeEmpurrarBear = true;
       tigerEmpurrando = false;
       bearEmpurrando = false;
+    }
+
+    /* ==========================
+       Funções de Controle de Música
+       ========================== */
+    function toggleMusica() {
+      const btn = document.getElementById('btnMusica');
+      const icone = document.getElementById('iconeMusica');
+      
+      if (!musicaFundo) return;
+      
+      if (musicaMutada) {
+        // Desmutar
+        musicaFundo.setVolume(volumeMusica);
+        if (jogoIniciado && !musicaTocando) {
+          musicaFundo.loop();
+          musicaTocando = true;
+        }
+        musicaMutada = false;
+        btn.innerHTML = '🔊';
+        btn.classList.remove('mutado');
+        icone.innerHTML = '🎵';
+      } else {
+        // Mutar
+        musicaFundo.setVolume(0);
+        musicaMutada = true;
+        btn.innerHTML = '🔇';
+        btn.classList.add('mutado');
+        icone.innerHTML = '🔇';
+      }
+    }
+
+    function ajustarVolume(valor) {
+      volumeMusica = valor / 100;
+      if (musicaFundo && !musicaMutada) {
+        musicaFundo.setVolume(volumeMusica);
+      }
     }
 
     function draw() {
@@ -408,6 +512,13 @@
 
     function fimDeJogo() {
       jogoAcabou = true; noLoop();
+      
+      // Parar música no fim do jogo
+      if (musicaFundo && musicaTocando) {
+        musicaFundo.stop();
+        musicaTocando = false;
+      }
+      
       const vencedor = placar[0] >= 15 ? 0 : 1;
       document.getElementById('mensagemVitoria').textContent = vencedor === 0 ? "Quer melzinho, meu felpudinho?" : "Volta pro seu Sucrilhos, gatinho!";
       document.getElementById('vencedorImagem').src = vencedor === 0 ? "tigre-vencendo.png" : "urso-vencendo.png";
