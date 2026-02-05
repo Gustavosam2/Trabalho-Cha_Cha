@@ -156,12 +156,16 @@
     let tempoEmpurrando = 0;
 
     /* ==========================
-       Variáveis de Música (HTML5 Audio)
+       Variáveis de Áudio
        ========================== */
     let musicaFundo;
+    let somPulo;
+    let somBolaQuica;
+    let somTorcida;
     let musicaTocando = false;
     let musicaMutada = false;
     let volumeMusica = 0.5;
+    let volumeEfeitos = 0.7; // Volume dos efeitos sonoros
 
     function preload() {
       // Carregar sprites originais
@@ -183,12 +187,27 @@
       recalcularMedidas();
       inicializarJogo();
       
-      // Criar elemento de áudio HTML5 (mais confiável que p5.sound)
+      // Criar elementos de áudio HTML5
+      // Música de fundo
       musicaFundo = new Audio();
-      // Usando uma música de basquete/hip-hop gratuita
       musicaFundo.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
       musicaFundo.loop = true;
       musicaFundo.volume = volumeMusica;
+      
+      // Som de pulo (efeito de "jump" estilo jogo retrô)
+      somPulo = new Audio();
+      somPulo.src = "https://www.fesliyanstudios.com/play-mp3/387";
+      somPulo.volume = volumeEfeitos;
+      
+      // Som de bola quicando
+      somBolaQuica = new Audio();
+      somBolaQuica.src = "https://www.fesliyanstudios.com/play-mp3/6734";
+      somBolaQuica.volume = volumeEfeitos;
+      
+      // Som de torcida/celebração
+      somTorcida = new Audio();
+      somTorcida.src = "https://www.fesliyanstudios.com/play-mp3/6120";
+      somTorcida.volume = volumeEfeitos;
       
       noLoop();
     }
@@ -202,23 +221,21 @@
       if (musicaFundo && !musicaTocando && !musicaMutada) {
         musicaFundo.play().then(() => {
           musicaTocando = true;
-          console.log("Música iniciada!");
         }).catch(e => {
-          console.log("Erro ao tocar música:", e);
-          // Tentar novamente após interação do usuário
-          document.addEventListener('click', function tocarMusica() {
-            if (!musicaTocando && !musicaMutada) {
-              musicaFundo.play().then(() => {
-                musicaTocando = true;
-                console.log("Música iniciada após clique!");
-              });
-              document.removeEventListener('click', tocarMusica);
-            }
-          }, { once: true });
+          console.log("Aguardando interação para tocar música...");
         });
       }
       
       loop();
+    }
+
+    // Função auxiliar para tocar sons de efeito
+    function tocarSom(audio) {
+      if (!audio || musicaMutada) return;
+      // Clonar o áudio para permitir sobreposição (tocar mesmo se já estiver tocando)
+      let somClone = audio.cloneNode();
+      somClone.volume = audio.volume;
+      somClone.play().catch(e => console.log("Erro ao tocar som:", e));
     }
 
     function recalcularMedidas() {
@@ -251,17 +268,17 @@
       const btn = document.getElementById('btnMusica');
       const icone = document.getElementById('iconeMusica');
       
-      if (!musicaFundo) return;
-      
       if (musicaMutada) {
         // Desmutar
         musicaFundo.volume = volumeMusica;
+        somPulo.volume = volumeEfeitos;
+        somBolaQuica.volume = volumeEfeitos;
+        somTorcida.volume = volumeEfeitos;
         musicaMutada = false;
         btn.innerHTML = '🔊';
         btn.classList.remove('mutado');
         icone.innerHTML = '🎵';
         
-        // Se o jogo já começou, tentar tocar
         if (jogoIniciado && !musicaTocando) {
           musicaFundo.play().then(() => {
             musicaTocando = true;
@@ -280,8 +297,12 @@
 
     function ajustarVolume(valor) {
       volumeMusica = valor / 100;
-      if (musicaFundo && !musicaMutada) {
+      volumeEfeitos = valor / 100;
+      if (!musicaMutada) {
         musicaFundo.volume = volumeMusica;
+        somPulo.volume = volumeEfeitos;
+        somBolaQuica.volume = volumeEfeitos;
+        somTorcida.volume = volumeEfeitos;
       }
     }
 
@@ -358,6 +379,7 @@
         this.teclaDireita = teclaDireita.toUpperCase();
         this.direction = 1;
         this.isTiger = cor.toString() === color(255, 100, 100).toString();
+        this.estavaNoChao = true; // Para detectar quando pula
       }
 
       atualizar() {
@@ -365,14 +387,20 @@
         this.y += this.vy;
         if (teclas[this.teclaEsquerda]) { this.x -= velocidadeDoJogador; this.direction = -1; }
         if (teclas[this.teclaDireita]) { this.x += velocidadeDoJogador; this.direction = 1; }
-        if (this.y + this.alturaSprite * 0.85 >= alturaDoChao) {
+        
+        // Verificar se está no chão
+        let estaNoChao = this.y + this.alturaSprite * 0.85 >= alturaDoChao;
+        
+        if (estaNoChao) {
           this.y = alturaDoChao - this.alturaSprite * 0.85;
           this.vy = 0;
           this.noChao = true;
         } else {
           this.noChao = false;
         }
+        
         this.x = constrain(this.x, this.raio, width - this.raio);
+        this.estavaNoChao = estaNoChao;
       }
 
       mostrar() {
@@ -411,6 +439,7 @@
         this.grudada = false;
         this.jogadorDono = null;
         this.podeGrudar = true;
+        this.estavaNoChao = true; // Para detectar quique
       }
 
       atualizar() {
@@ -419,16 +448,28 @@
           this.x = this.jogadorDono.x;
           this.y = centroJogadorY - 30;
           this.vx = 0; this.vy = 0;
+          this.estavaNoChao = false;
           return;
         }
         this.vy += gravidade;
         this.x += this.vx;
         this.y += this.vy;
+        
+        // Verificar se bateu no chão
         if (this.y + this.raio > alturaDoChao + this.spriteOffsetY) {
+          // Só toca som se estava caindo (vy > 0) e não estava no chão antes
+          if (this.vy > 2 && !this.estavaNoChao) {
+            tocarSom(somBolaQuica);
+          }
+          
           this.y = alturaDoChao - this.raio + this.spriteOffsetY;
           this.vy *= -0.75;
           this.vx *= 0.9;
+          this.estavaNoChao = true;
+        } else {
+          this.estavaNoChao = false;
         }
+        
         if (this.x - this.raio < 0) { this.x = this.raio; this.vx *= -0.8; }
         if (this.x + this.raio > width) { this.x = width - this.raio; this.vx *= -0.8; }
         if (this.y - this.raio < 0) { this.y = this.raio; this.vy *= -0.6; }
@@ -507,7 +548,12 @@
 
       for (let j of jogadores) {
         if (key.toUpperCase() === j.teclaCima && j.noChao) {
-          j.vy = -puloDoJogador * 1.1; j.noChao = false;
+          j.vy = -puloDoJogador * 1.1; 
+          j.noChao = false;
+          
+          // Tocar som de pulo!
+          tocarSom(somPulo);
+          
           if (bola.grudada && bola.jogadorDono === j) {
             bola.soltar(); bola.vx = j.direction * velocidadeDoJogador * 1.6; bola.vy = -puloDoJogador * 1.0;
           }
@@ -534,12 +580,15 @@
     function fimDeJogo() {
       jogoAcabou = true; noLoop();
       
-      // Parar música no fim do jogo
+      // Parar música de fundo
       if (musicaFundo && musicaTocando) {
         musicaFundo.pause();
         musicaFundo.currentTime = 0;
         musicaTocando = false;
       }
+      
+      // Tocar som de torcida/celebração!
+      tocarSom(somTorcida);
       
       const vencedor = placar[0] >= 15 ? 0 : 1;
       document.getElementById('mensagemVitoria').textContent = vencedor === 0 ? "Quer melzinho, meu felpudinho?" : "Volta pro seu Sucrilhos, gatinho!";
